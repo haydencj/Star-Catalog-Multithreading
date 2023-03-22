@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <semaphore.h>
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
@@ -28,11 +29,13 @@
 #include <assert.h>
 #include <getopt.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "utility.h"
 #include "star.h"
 #include "float.h"
 
 #define NUM_STARS 30000 
+#define MAX_THREADS 1000
 #define MAX_LINE 1024
 #define DELIMITER " \t\n"
 
@@ -41,7 +44,11 @@ uint8_t   (*distance_calculated)[NUM_STARS];
 
 double  min  = FLT_MAX;
 double  max  = FLT_MIN;
-
+double mean_thread = 0;
+int num_threads = 0;
+pthread_mutex_t mutex;
+sem_t mutex2;
+uint64_t count = 0;
 
 void showHelp()
 {
@@ -55,7 +62,7 @@ void showHelp()
 // Embarassingly inefficient, intentionally bad method
 // to calculate all entries one another to determine the
 // average angular separation between any two stars 
-float determineAverageAngularDistance( struct Star arr[] )
+float determineAverageAngularDistance( struct Star arr[])
 {
     double mean = 0;
 
@@ -89,6 +96,51 @@ float determineAverageAngularDistance( struct Star arr[] )
       }
     }
     return mean;
+}
+
+// Threaded version
+static void* determineAverageAngularDistance_threaded( void* arg )
+{
+    int t = (intptr_t) arg;
+    uint32_t i, j;
+
+    int start  = (NUM_STARS/num_threads) * t;
+    int end = ((NUM_STARS/num_threads) * (t + 1)) - 1;
+
+    printf("start: %d end: %d thread#: %d\n", start, end, t);
+    for (i = start; i <= end; i++)
+    {
+      pthread_mutex_lock(&mutex);
+      for (j = 0; j < NUM_STARS; j++)
+      {
+        
+        //sem_wait(&mutex2);
+
+        if( i!=j && distance_calculated[i][j] == 0 )
+        {
+          double distance = calculateAngularDistance( star_array[i].RightAscension, star_array[i].Declination,
+                                                      star_array[j].RightAscension, star_array[j].Declination ) ;
+          distance_calculated[i][j] = 1;
+          distance_calculated[j][i] = 1;
+          count++;
+
+          if( min > distance )
+          {
+            min = distance;
+          }
+
+          if( max < distance )
+          {
+            max = distance;
+          }
+          mean_thread = mean_thread + (distance-mean_thread)/count;
+        }
+        //sem_post(&mutex2);
+      }
+      pthread_mutex_unlock(&mutex);
+    }
+
+    return NULL;
 }
 
 
@@ -127,6 +179,13 @@ int main( int argc, char * argv[] )
     {
       showHelp();
       exit(0);
+    }
+
+    else if( strcmp(argv[n], "-t" ) == 0 )
+    {
+      printf("Specify number of threads: ");
+      scanf("%d", &num_threads);
+      printf("%d threads will be used.\n\n", num_threads);
     }
   }
 
@@ -173,12 +232,65 @@ int main( int argc, char * argv[] )
   }
   printf("%d records read\n", star_count );
 
-  // Find the average angular distance in the most inefficient way possible
-  double distance =  determineAverageAngularDistance( star_array );
+  //Start time before calculations
+  time_t start, end;
+  start = time(NULL);
+
+  //Threaded version
+  pthread_t tid[num_threads];
+  double distance = 0;
+
+  sem_init(&mutex2, 0, 1);
+  if(pthread_mutex_init(&mutex, NULL) != 0)
+  {
+    printf("ERROR: Failed to initialize mutex\n");
+  }
+
+  if(num_threads > 0 && num_threads <= MAX_THREADS)
+  {
+    for(int i = 0; i < num_threads; i++)
+    {
+      int status = pthread_create(&tid[i], NULL, &determineAverageAngularDistance_threaded, (void*)(intptr_t) i);
+
+      if(status != 0)
+      {
+        printf("ERROR: Failed to create thread %d\n", i);
+      }
+    }
+
+    for(int i = 0; i < num_threads; i++)
+    {
+      if(pthread_join(tid[i], NULL) != 0)
+      {
+        printf("ERROR: Failed to join thread %d\n", i);
+      }
+    }
+
+    distance = mean_thread;
+  }
+
+  //Non threaded version
+  else if(num_threads == 0)
+  {
+    // Find the average angular distance in the most inefficient way possible
+    distance =  determineAverageAngularDistance( star_array );
+  }
+  
+  //Invalid thread count entered
+  else
+  {
+    printf("Number of threads not supported.\n");
+    exit(1);
+  }
+
+  //End time after calculations
+  end = time(NULL);
+
   printf("Average distance found is %lf\n", distance );
   printf("Minimum distance found is %lf\n", min );
   printf("Maximum distance found is %lf\n", max );
 
+  printf("\nRuntime: %.2f seconds\n", difftime(end, start));
   return 0;
 }
 
