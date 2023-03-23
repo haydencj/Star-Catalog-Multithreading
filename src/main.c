@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <semaphore.h>
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
@@ -47,7 +46,6 @@ double  max  = FLT_MIN;
 double mean_thread = 0;
 int num_threads = 0;
 pthread_mutex_t mutex;
-sem_t mutex2;
 uint64_t count = 0;
 
 void showHelp()
@@ -107,14 +105,14 @@ static void* determineAverageAngularDistance_threaded( void* arg )
     int start  = (NUM_STARS/num_threads) * t;
     int end = ((NUM_STARS/num_threads) * (t + 1)) - 1;
 
-    printf("start: %d end: %d thread#: %d\n", start, end, t);
+    //printf("start: %d end: %d thread#: %d\n", start, end, t);
+
+    pthread_mutex_lock(&mutex);
+
     for (i = start; i <= end; i++)
     {
-      pthread_mutex_lock(&mutex);
       for (j = 0; j < NUM_STARS; j++)
       {
-        
-        //sem_wait(&mutex2);
 
         if( i!=j && distance_calculated[i][j] == 0 )
         {
@@ -135,11 +133,10 @@ static void* determineAverageAngularDistance_threaded( void* arg )
           }
           mean_thread = mean_thread + (distance-mean_thread)/count;
         }
-        //sem_post(&mutex2);
       }
-      pthread_mutex_unlock(&mutex);
+     
     }
-
+    pthread_mutex_unlock(&mutex);
     return NULL;
 }
 
@@ -240,7 +237,6 @@ int main( int argc, char * argv[] )
   pthread_t tid[num_threads];
   double distance = 0;
 
-  sem_init(&mutex2, 0, 1);
   if(pthread_mutex_init(&mutex, NULL) != 0)
   {
     printf("ERROR: Failed to initialize mutex\n");
