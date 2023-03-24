@@ -107,7 +107,7 @@ static void* determineAverageAngularDistance_threaded( void* arg )
 
     //printf("start: %d end: %d thread#: %d\n", start, end, t);
 
-    pthread_mutex_lock(&mutex);
+   
 
     for (i = start; i <= end; i++)
     {
@@ -120,6 +120,8 @@ static void* determineAverageAngularDistance_threaded( void* arg )
                                                       star_array[j].RightAscension, star_array[j].Declination ) ;
           distance_calculated[i][j] = 1;
           distance_calculated[j][i] = 1;
+          
+          pthread_mutex_lock(&mutex);
           count++;
 
           if( min > distance )
@@ -132,11 +134,12 @@ static void* determineAverageAngularDistance_threaded( void* arg )
             max = distance;
           }
           mean_thread = mean_thread + (distance-mean_thread)/count;
+          pthread_mutex_unlock(&mutex);
         }
       }
      
     }
-    pthread_mutex_unlock(&mutex);
+    
     return NULL;
 }
 
