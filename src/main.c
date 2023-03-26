@@ -74,7 +74,7 @@ float determineAverageAngularDistance( struct Star arr[])
       {
         if( i!=j && distance_calculated[i][j] == 0 )
         {
-          double distance = calculateAngularDistance( arr[i].RightAscension, arr[j].Declination,
+          double distance = calculateAngularDistance( arr[i].RightAscension, arr[i].Declination,
                                                       arr[j].RightAscension, arr[j].Declination ) ;
           distance_calculated[i][j] = 1;
           distance_calculated[j][i] = 1;
@@ -106,8 +106,6 @@ static void* determineAverageAngularDistance_threaded( void* arg )
     int end = ((NUM_STARS/num_threads) * (t + 1)) - 1;
 
     //printf("start: %d end: %d thread#: %d\n", start, end, t);
-
-   
 
     for (i = start; i <= end; i++)
     {
@@ -181,10 +179,11 @@ int main( int argc, char * argv[] )
       exit(0);
     }
 
-    else if( strcmp(argv[n], "-t" ) == 0 )
+    else if( strcmp(argv[n], "-t" ) == 0 && (argv[n+1] != NULL) )
     {
-      printf("Specify number of threads: ");
-      scanf("%d", &num_threads);
+      num_threads = atoi(argv[n+1]);
+      // printf("Specify number of threads: ");
+      // scanf("%d", &num_threads);
       printf("%d threads will be used.\n\n", num_threads);
     }
   }
