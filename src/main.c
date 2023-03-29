@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include <time.h>
+#include <sys/time.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -101,7 +102,7 @@ static void* determineAverageAngularDistance_threaded( void* arg )
 {
     int t = (intptr_t) arg;
     uint32_t i, j;
-
+    
     int start  = (NUM_STARS/num_threads) * t;
     int end = ((NUM_STARS/num_threads) * (t + 1)) - 1;
 
@@ -232,8 +233,12 @@ int main( int argc, char * argv[] )
   printf("%d records read\n", star_count );
 
   //Start time before calculations
-  time_t start, end;
-  start = time(NULL);
+  // time_t start, end;
+  // start = time(NULL);
+  struct timeval begin;
+  struct timeval end;
+
+  gettimeofday( &begin, NULL );
 
   //Threaded version
   pthread_t tid[num_threads];
@@ -282,13 +287,15 @@ int main( int argc, char * argv[] )
   }
 
   //End time after calculations
-  end = time(NULL);
+  //end = time(NULL);
+  gettimeofday( &end, NULL );
+  float time_duration = ( end.tv_sec - begin.tv_sec );
 
   printf("Average distance found is %lf\n", distance );
   printf("Minimum distance found is %lf\n", min );
   printf("Maximum distance found is %lf\n", max );
 
-  printf("\nRuntime: %.2f seconds\n", difftime(end, start));
+  printf("\nRuntime: %.2f seconds\n", time_duration);
   return 0;
 }
 
