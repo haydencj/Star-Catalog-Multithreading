@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <time.h>
 #include <sys/time.h>
 #include <math.h>
 #include <stdlib.h>
@@ -106,8 +105,6 @@ static void* determineAverageAngularDistance_threaded( void* arg )
     int start  = (NUM_STARS/num_threads) * t;
     int end = ((NUM_STARS/num_threads) * (t + 1)) - 1;
 
-    //printf("start: %d end: %d thread#: %d\n", start, end, t);
-
     for (i = start; i <= end; i++)
     {
       for (j = 0; j < NUM_STARS; j++)
@@ -183,8 +180,6 @@ int main( int argc, char * argv[] )
     else if( strcmp(argv[n], "-t" ) == 0 && (argv[n+1] != NULL) )
     {
       num_threads = atoi(argv[n+1]);
-      // printf("Specify number of threads: ");
-      // scanf("%d", &num_threads);
       printf("%d threads will be used.\n\n", num_threads);
     }
   }
@@ -233,8 +228,6 @@ int main( int argc, char * argv[] )
   printf("%d records read\n", star_count );
 
   //Start time before calculations
-  // time_t start, end;
-  // start = time(NULL);
   struct timeval begin;
   struct timeval end;
 
@@ -287,7 +280,6 @@ int main( int argc, char * argv[] )
   }
 
   //End time after calculations
-  //end = time(NULL);
   gettimeofday( &end, NULL );
   float time_duration = ( end.tv_sec - begin.tv_sec );
 
